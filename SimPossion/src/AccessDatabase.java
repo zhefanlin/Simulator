@@ -5,7 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -28,11 +27,9 @@ public class AccessDatabase{
 	
 	public ArrayList<String> selectRecords(String query, String columnName) throws SQLException,
 	ClassNotFoundException {
-		
-		
+				
 		Class.forName(driver);
-		Connection conn = DriverManager.getConnection(url, userName,
-				password);
+		Connection conn = DriverManager.getConnection(url, userName, password);
 
 		Statement sql_statement = conn.createStatement();
 		ResultSet result = sql_statement.executeQuery(query);
@@ -51,34 +48,11 @@ public class AccessDatabase{
 	ClassNotFoundException {
 		
 		Class.forName(driver);
-		Connection conn = DriverManager.getConnection(url + dbName, userName,
-				password);
+		Connection conn = DriverManager.getConnection(url + dbName, userName, password);
 		
 		PreparedStatement pstmt = conn.prepareStatement(query);	
 		pstmt.executeUpdate();
 	}
-
-//	public String getDeviceID(String IPAddr) throws SQLException,
-//			ClassNotFoundException {
-//		String DeviceID="";
-//		Class.forName(driver);
-//		Connection conn = DriverManager.getConnection(url + dbName, userName,
-//				password);
-//		
-//		String query = "SELECT DeviceID FROM simulator.SimIP2DeviceID"
-//				+ " WHERE " + "IPAddr=" + "'" + IPAddr + "'" + ";";
-//
-//		Statement sql_statement = conn.createStatement();
-//		ResultSet result = sql_statement.executeQuery(query);
-//		
-//		while (result.next()) {
-//		DeviceID = result.getString("DeviceID");
-//		}
-//		
-//		
-//		conn.close();
-//		return DeviceID;
-//	}
 	
 
 	public float getNhd(String DeviceID, String ProgGenre) throws SQLException,
@@ -87,8 +61,7 @@ public class AccessDatabase{
 		float Nhd = 0;
 
 		Class.forName(driver);
-		Connection conn = DriverManager.getConnection(url + dbName2, userName,
-				password);
+		Connection conn = DriverManager.getConnection(url + dbName2, userName, password);
 
 		Statement sql_statement = conn.createStatement();
 		ResultSet result = sql_statement
@@ -120,10 +93,8 @@ public class AccessDatabase{
 		float views = 0;
 		float EGRP = 0;
 		
-		
 		Class.forName(driver);
-		Connection conn = DriverManager.getConnection(url + dbName2, userName,
-				password);
+		Connection conn = DriverManager.getConnection(url + dbName2, userName, password);
 
 		Statement sql_statement = conn.createStatement();
 		ResultSet result = sql_statement.executeQuery("SELECT SUM(TotalGenreViews) FROM datamart.GenreViews_Dvc_DW JOIN  simulator.SimIP2DeviceID ON simulator.SimIP2DeviceID.DeviceID = datamart.GenreViews_Dvc_DW.DeviceID"
@@ -144,6 +115,7 @@ public class AccessDatabase{
 		return EGRP;
 	}
 
+	@SuppressWarnings("unchecked")
 	public String getBidRequest(int DayPart, int Week) throws SQLException,
 			ClassNotFoundException {
 		// TODO Auto-generated method stub
@@ -151,8 +123,6 @@ public class AccessDatabase{
 		String str = "";
 		int imp_id = 0;
 		
-		CalculateProbability cal = new CalculateProbability();
-
 		JSONObject BidRequest = new JSONObject();
 		JSONArray impArray = new JSONArray();
 
@@ -168,12 +138,14 @@ public class AccessDatabase{
 
 		while (result.next()) {
 			String IPAddr = result.getString("IPAddr");
-			String ProgGenre = result.getString("ProgGenre");
+			String ProgGenre = result.getString("ProgGenre");	
 			float lambda = result.getFloat("PoissonRate");
 			
-			double p = cal.Probability(lambda, 1);
+			CalculateProbability cal = new CalculateProbability();
+			int k = cal.getRandomK();
+			double p = cal.Probability(lambda, k);
 
-			if (p == 0.0) {
+			if (p >0.3) {
 				imp_id++;
 
 				JSONObject imp = new JSONObject();
@@ -183,21 +155,17 @@ public class AccessDatabase{
 				imp.put("ProgGenre", ProgGenre);
 
 				impArray.add(imp);
-
-				// System.out.println(IPAddr+"  "+ProgGenre+"  "+DayPart + "  "
-				// + Week + "  " + Lamda+"  "+p);
+				
+				//System.out.println(IPAddr+"  "+ProgGenre+"  "+DayPart + "  " + Week + "  " + lambda+"  "+k+"  "+p);			
 			}
-
 		}
 
 		BidRequest.put("id", 1);
 		BidRequest.put("imp", impArray);
 		str = BidRequest.toString();
-		// System.out.println(str);
 
 		if (imp_id == 0) {
 			str = "null";
-
 		}
 		sql_statement.close();
 		conn.close();

@@ -1,3 +1,5 @@
+import java.util.Random;
+
 public class CalculateProbability {
 
 	public CalculateProbability() {
@@ -22,6 +24,12 @@ public class CalculateProbability {
 	public double poissonRandomInterarrivalDelay(double lambda) {
 		
 	    return (Math.log(1.0-Math.random())/-lambda);
+	}
+	
+	public int getRandomK(){
+		Random random = new Random();
+		int k = random.nextInt(10) + 1;
+		return k;
 	}
 	
 }
