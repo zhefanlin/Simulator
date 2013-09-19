@@ -142,20 +142,21 @@ public class AccessDatabase{
 			float lambda = result.getFloat("PoissonRate");
 			
 			CalculateProbability cal = new CalculateProbability();
-			int k = cal.getRandomK();
-			double p = cal.Probability(lambda, k);
+			//int k = cal.getRandomK();
+			for(int k =1;k<11;k++){
+				double p = cal.Probability(lambda, k);
+			
+				if (p >0.3) {
+					imp_id++;
 
-			if (p >0.3) {
-				imp_id++;
+					JSONObject imp = new JSONObject();
+					imp.put("id", imp_id);
+					imp.put("banner", banner);
+					imp.put("IPAddr", IPAddr);
+					imp.put("ProgGenre", ProgGenre);
 
-				JSONObject imp = new JSONObject();
-				imp.put("id", imp_id);
-				imp.put("banner", banner);
-				imp.put("IPAddr", IPAddr);
-				imp.put("ProgGenre", ProgGenre);
-
-				impArray.add(imp);
-				
+					impArray.add(imp);
+				}
 				//System.out.println(IPAddr+"  "+ProgGenre+"  "+DayPart + "  " + Week + "  " + lambda+"  "+k+"  "+p);			
 			}
 		}
