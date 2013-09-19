@@ -1,6 +1,6 @@
 import java.util.Random;
 
-public class generateIP {
+public class GenerateIP {
 
 	public Random r = new Random();
 

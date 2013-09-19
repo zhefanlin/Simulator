@@ -1,13 +1,16 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-public class AccessDatabase {
+public class AccessDatabase{
 
 	public AccessDatabase() {
 
@@ -18,56 +21,159 @@ public class AccessDatabase {
 	String userName = "salil";
 	String password = "fonatix";
 	String dbName = "simulator";
+	String dbName2 = "datamart";
 
 	String driver = "com.mysql.jdbc.Driver";
 	String url = "jdbc:mysql://" + hostname + ":" + port + "/";
+	
+	public ArrayList<String> selectRecords(String query, String columnName) throws SQLException,
+	ClassNotFoundException {
+		
+		
+		Class.forName(driver);
+		Connection conn = DriverManager.getConnection(url, userName,
+				password);
 
-	// String jdbcUrl = "jdbc:mysql://" + hostname + ":" + port + "/" + dbName
-	// + "?user=" + userName + "&password=" + password;
-
-	public String getPoissonRate(int DayPart, int Week) throws SQLException {
-
-		String query = "SELECT * FROM simulator.SimPoissonRates" + " " + " "
-				+ "WHERE" + " " + "DayPart=" + DayPart + " " + "AND" + " "
-				+ "Week=" + Week + ";";
-		// String result = getProbability(query);
-
-		return query;
-
+		Statement sql_statement = conn.createStatement();
+		ResultSet result = sql_statement.executeQuery(query);
+		
+		ArrayList<String> list = new ArrayList<String>(100); 
+		
+		while (result.next()) {
+		list.add(result.getString(columnName));
+		}
+		conn.close();
+		return list;
+	}
+	
+	
+	public void updateTable(String query) throws SQLException,
+	ClassNotFoundException {
+		
+		Class.forName(driver);
+		Connection conn = DriverManager.getConnection(url + dbName, userName,
+				password);
+		
+		PreparedStatement pstmt = conn.prepareStatement(query);	
+		pstmt.executeUpdate();
 	}
 
-	public String getBidRequest(String query) throws SQLException,
+//	public String getDeviceID(String IPAddr) throws SQLException,
+//			ClassNotFoundException {
+//		String DeviceID="";
+//		Class.forName(driver);
+//		Connection conn = DriverManager.getConnection(url + dbName, userName,
+//				password);
+//		
+//		String query = "SELECT DeviceID FROM simulator.SimIP2DeviceID"
+//				+ " WHERE " + "IPAddr=" + "'" + IPAddr + "'" + ";";
+//
+//		Statement sql_statement = conn.createStatement();
+//		ResultSet result = sql_statement.executeQuery(query);
+//		
+//		while (result.next()) {
+//		DeviceID = result.getString("DeviceID");
+//		}
+//		
+//		
+//		conn.close();
+//		return DeviceID;
+//	}
+	
+
+	public float getNhd(String DeviceID, String ProgGenre) throws SQLException,
+			ClassNotFoundException {
+		float views = 0;
+		float Nhd = 0;
+
+		Class.forName(driver);
+		Connection conn = DriverManager.getConnection(url + dbName2, userName,
+				password);
+
+		Statement sql_statement = conn.createStatement();
+		ResultSet result = sql_statement
+				.executeQuery("SELECT SUM(TotalGenreViews) FROM datamart.GenreViews_Dvc_DW"
+						+ " WHERE "
+						+ "DeviceID="
+						+ "'"
+						+ DeviceID
+						+ "'"
+						+ " AND "
+						+ "ProgGenre="
+						+ "'"
+						+ ProgGenre
+						+ "'"
+						+ " AND " + "DayPart !=0" + ";");
+
+		while (result.next()) {
+			views = result.getInt("SUM(TotalGenreViews)");
+		}
+		Nhd = views/2;
+		sql_statement.close();
+		conn.close();
+		return Nhd;
+	}
+
+	public float getEGRP(String ProgGenre, int Week) throws SQLException,
+			ClassNotFoundException {
+		
+		float views = 0;
+		float EGRP = 0;
+		
+		
+		Class.forName(driver);
+		Connection conn = DriverManager.getConnection(url + dbName2, userName,
+				password);
+
+		Statement sql_statement = conn.createStatement();
+		ResultSet result = sql_statement.executeQuery("SELECT SUM(TotalGenreViews) FROM datamart.GenreViews_Dvc_DW JOIN  simulator.SimIP2DeviceID ON simulator.SimIP2DeviceID.DeviceID = datamart.GenreViews_Dvc_DW.DeviceID"
+						+ " WHERE "
+						+ "datamart.GenreViews_Dvc_DW.WeekPart= "
+						+ Week
+						+ " AND "
+						+ "datamart.GenreViews_Dvc_DW.ProgGenre="
+						+ "'" + ProgGenre + "'" + " AND " + "datamart.GenreViews_Dvc_DW.DayPart !=0" + ";");
+
+		while (result.next()) {
+			views = result.getInt("SUM(TotalGenreViews)");	
+		}
+		
+		EGRP = views;
+		sql_statement.close();
+		conn.close();
+		return EGRP;
+	}
+
+	public String getBidRequest(int DayPart, int Week) throws SQLException,
 			ClassNotFoundException {
 		// TODO Auto-generated method stub
 
 		String str = "";
 		int imp_id = 0;
-
-		Class.forName(driver);
-		Connection conn = DriverManager.getConnection(url + dbName, userName,
-				password);
-
-		Statement sql_statement = conn.createStatement();
-		ResultSet result = sql_statement.executeQuery(query);
+		
+		CalculateProbability cal = new CalculateProbability();
 
 		JSONObject BidRequest = new JSONObject();
 		JSONArray impArray = new JSONArray();
 
+		JSONObject banner = new JSONObject();
+		banner.put("w", 300);
+		banner.put("h", 200);
+		
+		Class.forName(driver);
+		Connection conn = DriverManager.getConnection(url + dbName, userName, password);
+
+		Statement sql_statement = conn.createStatement();
+		ResultSet result = sql_statement.executeQuery("SELECT * FROM simulator.SimPoissonRates" + " WHERE " + "DayPart=" + DayPart + " AND " + "Week=" + Week + ";");
+
 		while (result.next()) {
 			String IPAddr = result.getString("IPAddr");
 			String ProgGenre = result.getString("ProgGenre");
-			int DayPart = result.getInt("DayPart");
-			int Week = result.getInt("Week");
-			float Lamda = result.getFloat("PoissonRate");
+			float lambda = result.getFloat("PoissonRate");
+			
+			double p = cal.Probability(lambda, 1);
 
-			CalculateProbability cal = new CalculateProbability();
-			double p = cal.Probability(Lamda, 1);
-
-			JSONObject banner = new JSONObject();
-			banner.put("w", 300);
-			banner.put("h", 200);
-
-			if (p > 0.3) {
+			if (p == 0.0) {
 				imp_id++;
 
 				JSONObject imp = new JSONObject();
@@ -83,19 +189,18 @@ public class AccessDatabase {
 			}
 
 		}
-		
+
 		BidRequest.put("id", 1);
 		BidRequest.put("imp", impArray);
 		str = BidRequest.toString();
 		// System.out.println(str);
 
+		if (imp_id == 0) {
+			str = "null";
+
+		}
 		sql_statement.close();
 		conn.close();
-		
-		if(imp_id==0){str ="null";
-		
-		}
 		return str;
 	}
-
 }
